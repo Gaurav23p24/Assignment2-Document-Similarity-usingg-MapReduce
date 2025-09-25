@@ -48,6 +48,128 @@ Each line of the input file contains a `DocumentID` followed by its text. The pi
 
 ---
 
+# Setup and Execution
+
+Follow these steps to run the Document Similarity MapReduce job on the Hadoop Docker cluster.
+
+---
+
+## 1. Start the Hadoop Cluster
+
+Run the following command to start the Docker containers for Hadoop:
+
+```bash
+docker compose up -d
+````
+
+---
+
+## 2. Build the Code
+
+Build the Java project using Maven, which compiles the code and packages it into a JAR file:
+
+```bash
+mvn clean package
+```
+
+---
+
+## 3. Copy JAR to Docker Container
+
+Copy the generated JAR file into the `resourcemanager` container (replace the JAR name if different):
+
+```bash
+docker cp target/DocumentSimilarity-0.0.1-SNAPSHOT.jar resourcemanager:/opt/hadoop-3.2.1/share/hadoop/mapreduce/
+```
+---
+
+## 4. Copy Dataset to Docker Container
+
+Copy your input dataset (for example, `small_dataset.txt`) into the container:
+
+```bash
+docker cp input/small_dataset.txt resourcemanager:/opt/hadoop-3.2.1/share/hadoop/mapreduce/
+```
+
+---
+
+## 5. Execute the MapReduce Job
+
+First, connect to the container, move the dataset into HDFS, and then run the MapReduce job.
+
+```bash
+# Access the container's command line
+docker exec -it resourcemanager /bin/bash
+
+# Navigate to the Hadoop directory inside the container
+cd /opt/hadoop-3.2.1/share/hadoop/mapreduce/
+
+# Create an input directory in HDFS (only needed once)
+hadoop fs -mkdir -p /input/docsim
+
+# Copy the dataset from the container's local disk to HDFS
+hadoop fs -put ./small_dataset.txt /input/docsim
+
+# Execute the job
+# NOTE: The output directory (/output/small_results) MUST NOT exist before running the job
+hadoop jar DocumentSimilarity-0.0.1-SNAPSHOT.jar com.example.controller.DocumentSimilarityDriver /input/docsim/small_dataset.txt /output/small_results
+```
+
+## 6. View and Copy the Output
+
+After the job finishes, you can view the results and copy them from HDFS to the container local filesystem, then to your host machine.
+
+```bash
+# View the output directly in the container terminal
+hadoop fs -cat /output/small_results/*
+
+# Copy the output from HDFS to the container's local disk
+hdfs dfs -get /output/small_results .
+
+# Exit the container shell
+exit
+
+# From your host (Codespace) terminal, copy the results from the container to your project folder
+docker cp resourcemanager:/opt/hadoop-3.2.1/share/hadoop/mapreduce/small_results/ shared-folder/output/
+```
+## 📑 Sample Input Snippets
+
+### 🟢 Small Dataset (Excerpt)
+```text
+Document1  This is a small dataset containing simple text for testing purposes
+Document2  The quick brown fox jumps over the lazy dog in this example sentence
+Document3  Spark makes big data processing simple and efficient with its APIs
+Document4  Machine learning models require clean structured and labeled data
+Document5  Text processing often involves tokenization filtering and normalization
+```
+### 🟢 Small Dataset
+```
+Document101  Distributed computing allows processing large volumes of data efficiently
+Document102  MapReduce jobs split tasks into map and reduce phases to scale horizontally
+Document103  Data engineers frequently use Hadoop and Spark for batch data processing
+Document104  Fault tolerance is a key feature of HDFS which replicates blocks across nodes
+Document105  Tuning block size and parallelism parameters improves performance on clusters
+```
+### 🟢 Small Dataset
+```
+Document2001  Machine learning on big data often requires feature engineering at scale
+Document2002  Clusters must be monitored to avoid resource bottlenecks and data skew
+Document2003  Joins in distributed systems can cause expensive shuffles if not optimized
+Document2004  Using combiners reduces intermediate data size and improves job efficiency
+Document2005  Real-world pipelines often combine batch processing with streaming analytics
+```
+### Observations:
+```
+• The 3-node cluster consistently outperformed the 1-node cluster across all datasets.
+• Performance gain was minimal for the small dataset but significant for medium and large datasets.
+• The parallel execution of map and reduce tasks distributed the load efficiently.
+• Using "hdfs dfs -put -f" ensured smooth overwriting of input datasets between test runs.
+• Clearing old HDFS output directories before re-runs prevented job failures due to existing paths.
+```
+
+---
+
+
 ## 🗂️ Repository Layout
 
 ```text
