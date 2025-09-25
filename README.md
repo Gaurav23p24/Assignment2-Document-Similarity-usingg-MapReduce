@@ -160,11 +160,7 @@ Document2005  Real-world pipelines often combine batch processing with streaming
 ```
 ### My Observations:
 
-• The 3-node cluster consistently outperformed the 1-node cluster across all datasets.
-• Performance gain was minimal for the small dataset but significant for medium and large datasets.
-• The parallel execution of map and reduce tasks distributed the load efficiently.
-• Using "hdfs dfs -put -f" ensured smooth overwriting of input datasets between test runs.
-• Clearing old HDFS output directories before re-runs prevented job failures due to existing paths.
+• Performance gain was minimal for the small dataset but significant for medium and large datasets. The parallel execution of map and reduce tasks distributed the load efficiently. Using "hdfs dfs -put -f" ensured smooth overwriting of input datasets between test runs. Clearing old HDFS output directories before re-runs prevented job failures due to existing paths.
 
 
 ---
