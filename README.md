@@ -134,7 +134,7 @@ docker cp resourcemanager:/opt/hadoop-3.2.1/share/hadoop/mapreduce/small_results
 ```
 ## 📑 Sample Input Snippets
 
-### 🟢 Small Dataset (Excerpt)
+### Small Dataset (Excerpt)
 ```text
 Document1  This is a small dataset containing simple text for testing purposes
 Document2  The quick brown fox jumps over the lazy dog in this example sentence
@@ -142,7 +142,7 @@ Document3  Spark makes big data processing simple and efficient with its APIs
 Document4  Machine learning models require clean structured and labeled data
 Document5  Text processing often involves tokenization filtering and normalization
 ```
-### 🟢 Small Dataset
+### Medium Dataset
 ```
 Document101  Distributed computing allows processing large volumes of data efficiently
 Document102  MapReduce jobs split tasks into map and reduce phases to scale horizontally
@@ -150,7 +150,7 @@ Document103  Data engineers frequently use Hadoop and Spark for batch data proce
 Document104  Fault tolerance is a key feature of HDFS which replicates blocks across nodes
 Document105  Tuning block size and parallelism parameters improves performance on clusters
 ```
-### 🟢 Small Dataset
+### Large Dataset
 ```
 Document2001  Machine learning on big data often requires feature engineering at scale
 Document2002  Clusters must be monitored to avoid resource bottlenecks and data skew
@@ -158,14 +158,14 @@ Document2003  Joins in distributed systems can cause expensive shuffles if not o
 Document2004  Using combiners reduces intermediate data size and improves job efficiency
 Document2005  Real-world pipelines often combine batch processing with streaming analytics
 ```
-### Observations:
-```
+### My Observations:
+
 • The 3-node cluster consistently outperformed the 1-node cluster across all datasets.
 • Performance gain was minimal for the small dataset but significant for medium and large datasets.
 • The parallel execution of map and reduce tasks distributed the load efficiently.
 • Using "hdfs dfs -put -f" ensured smooth overwriting of input datasets between test runs.
 • Clearing old HDFS output directories before re-runs prevented job failures due to existing paths.
-```
+
 
 ---
 
