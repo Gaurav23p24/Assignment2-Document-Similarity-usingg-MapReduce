@@ -1,142 +1,128 @@
-# Assignment 2: Document Similarity using MapReduce
+# Assignment 2 — Document Similarity using MapReduce
 
-**Name:** 
-
-**Student ID:** 
-
-## Approach and Implementation
-
-### Mapper Design
-[Explain the logic of your Mapper class. What is its input key-value pair? What does it emit as its output key-value pair? How does it help in solving the overall problem?]
-
-### Reducer Design
-[Explain the logic of your Reducer class. What is its input key-value pair? How does it process the values for a given key? What does it emit as the final output? How do you calculate the Jaccard Similarity here?]
-
-### Overall Data Flow
-[Describe how data flows from the initial input files, through the Mapper, shuffle/sort phase, and the Reducer to produce the final output.]
+**Course:** Cloud Computing for Data Analysis (ITCS 6190/8190, Fall 2025)  
+**Instructor:** Marco Vieira  
+**Student:** Gaurav Bharatkumar Patel (801426641)
 
 ---
 
-## Setup and Execution
+## 📌 Overview
 
-### ` Note: The below commands are the ones used for the Hands-on. You need to edit these commands appropriately towards your Assignment to avoid errors. `
+This project computes **pairwise Jaccard Similarity** between documents using **Hadoop MapReduce**.  
+Each line of the input file contains a `DocumentID` followed by its text. The pipeline:
 
-### 1. **Start the Hadoop Cluster**
+1. **Parses** each line, normalizes case, and removes punctuation.
+2. **Builds sets of unique tokens** per document.
+3. **Counts intersections** of document pairs via shared tokens across reducers.
+4. **Computes** Jaccard = \|A ∩ B\| / \|A ∪ B\| and outputs `DocumentX, DocumentY  Similarity: s.xx`.
 
-Run the following command to start the Hadoop cluster:
+---
 
-```bash
-docker compose up -d
-```
+## 🧠 Approach & Implementation
 
-### 2. **Build the Code**
+### Mapper (`DocumentSimilarityMapper`)
+- **Input:** `(LongWritable offset, Text line)`
+- **Steps:**
+  1. Split into `docID` and `content`.
+  2. Normalize: lowercase + strip punctuation.
+  3. Tokenize and insert into a `HashSet<String>` to get **unique** terms; size ⇒ `docSize`.
+  4. **Emit:** `(word, "docID:docSize")` for every unique word in the document.
+- **Example emit:** `("spark", "Document12:157")`
 
-Build the code using Maven:
+### Reducer (`DocumentSimilarityReducer`)
+- **Input:** `key = word`, `values = ["docID:docSize", ...]`
+- **reduce()**
+  - For the given `word`, collect all `(docID, docSize)` pairs.
+  - Record per-document sizes in `docSizes: Map<String,Integer>`.
+  - Generate **unique pairs** among docs containing `word` and increment  
+    `intersectionCounts: Map<Pair, Integer>` for that pair.
+- **cleanup()**
+  - For each pair `(A,B)` in `intersectionCounts`:
+    - `inter = intersectionCounts[A,B]`
+    - `|A| = docSizes[A]`, `|B| = docSizes[B]`
+    - `union = |A| + |B| - inter`
+    - `jaccard = inter / union` → **rounded to two decimals**
+  - **Emit:** `"A,B"  →  "Similarity: 0.xx"`
 
-```bash
-mvn clean package
-```
+> This single job approach avoids materializing all pairs in the mapper and leverages reducer-side aggregation of intersections.
 
-### 4. **Copy JAR to Docker Container**
+---
 
-Copy the JAR file to the Hadoop ResourceManager container:
+## 🗂️ Repository Layout
 
-```bash
-docker cp target/WordCountUsingHadoop-0.0.1-SNAPSHOT.jar resourcemanager:/opt/hadoop-3.2.1/share/hadoop/mapreduce/
-```
-
-### 5. **Move Dataset to Docker Container**
-
-Copy the dataset to the Hadoop ResourceManager container:
-
-```bash
-docker cp shared-folder/input/data/input.txt resourcemanager:/opt/hadoop-3.2.1/share/hadoop/mapreduce/
-```
-
-### 6. **Connect to Docker Container**
-
-Access the Hadoop ResourceManager container:
-
-```bash
-docker exec -it resourcemanager /bin/bash
-```
-
-Navigate to the Hadoop directory:
-
-```bash
-cd /opt/hadoop-3.2.1/share/hadoop/mapreduce/
-```
-
-### 7. **Set Up HDFS**
-
-Create a folder in HDFS for the input dataset:
-
-```bash
-hadoop fs -mkdir -p /input/data
-```
-
-Copy the input dataset to the HDFS folder:
-
-```bash
-hadoop fs -put ./input.txt /input/data
-```
-
-### 8. **Execute the MapReduce Job**
-
-Run your MapReduce job using the following command: Here I got an error saying output already exists so I changed it to output1 instead as destination folder
-
-```bash
-hadoop jar /opt/hadoop-3.2.1/share/hadoop/mapreduce/WordCountUsingHadoop-0.0.1-SNAPSHOT.jar com.example.controller.Controller /input/data/input.txt /output1
-```
-
-### 9. **View the Output**
-
-To view the output of your MapReduce job, use:
-
-```bash
-hadoop fs -cat /output1/*
-```
-
-### 10. **Copy Output from HDFS to Local OS**
-
-To copy the output from HDFS to your local machine:
-
-1. Use the following command to copy from HDFS:
-    ```bash
-    hdfs dfs -get /output1 /opt/hadoop-3.2.1/share/hadoop/mapreduce/
-    ```
-
-2. use Docker to copy from the container to your local machine:
-   ```bash
-   exit 
-   ```
-    ```bash
-    docker cp resourcemanager:/opt/hadoop-3.2.1/share/hadoop/mapreduce/output1/ shared-folder/output/
-    ```
-3. Commit and push to your repo so that we can able to see your output
+Assignment2-Document-Similarity-usingg-MapReduce/
+├─ src/main/java/com/example/...
+├─ docker-compose.yml
+├─ input/
+│ ├─ small_dataset.txt
+│ ├─ medium_dataset.txt
+│ └─ large_dataset.txt
+├─ outputs/ output_large output_medium output_small
+│ ├─ 3nodes/  
+│ └─ 1node/ 
+├─ pom.xml
+└─ README.md
 
 
 ---
 
-## Challenges and Solutions
+## Sample Outputs (Truncated)
 
-[Describe any challenges you faced during this assignment. This could be related to the algorithm design (e.g., how to generate pairs), implementation details (e.g., data structures, debugging in Hadoop), or environmental issues. Explain how you overcame these challenges.]
+### Small Dataset
+| Document Pair | Similarity |
+|--------------|-----------|
+| Document10,Document19 | 0.42 |
+| Document20,Document3  | 0.53 |
+| Document10,Document18 | 0.50 |
+| Document20,Document4  | 0.63 |
+| Document20,Document5  | 0.61 |
+| Document7,Document9   | 0.60 |
+| Document13,Document16 | 0.67 |
+| Document18,Document6  | 0.83 |
+| Document1,Document15  | 0.69 |
+| Document4,Document7   | 0.74 |
 
 ---
-## Sample Input
 
-**Input from `small_dataset.txt`**
-```
-Document1 This is a sample document containing words
-Document2 Another document that also has words
-Document3 Sample text with different words
-```
-## Sample Output
+### Medium Dataset
+| Document Pair | Similarity |
+|--------------|-----------|
+| Document13,Document2  | 0.84 |
+| Document22,Document4  | 0.89 |
+| Document22,Document27 | 0.90 |
+| Document2,Document24  | 0.95 |
+| Document32,Document47 | 0.85 |
+| Document25,Document36 | 1.00 |
+| Document47,Document7  | 0.89 |
+| Document16,Document30 | 0.95 |
+| Document23,Document6  | 0.88 |
+| Document27,Document4  | 0.90 |
 
-**Output from `small_dataset.txt`**
-```
-"Document1, Document2 Similarity: 0.56"
-"Document1, Document3 Similarity: 0.42"
-"Document2, Document3 Similarity: 0.50"
-```
-## Obtained Output: (Place your obtained output here.)
+---
+
+### Large Dataset
+| Document Pair | Similarity |
+|--------------|-----------|
+| Document89,Document96 | 0.95 |
+| Document62,Document74 | 0.89 |
+| Document71,Document78 | 1.00 |
+| Document31,Document79 | 0.95 |
+| Document48,Document66 | 1.00 |
+| Document48,Document73 | 1.00 |
+| Document18,Document71 | 0.95 |
+| Document18,Document99 | 1.00 |
+| Document65,Document84 | 0.95 |
+| Document48,Document85 | 1.00 |
+
+
+---
+
+## Challenges & Actions Taken
+
+| Challenge | Action Taken |
+|----------|--------------|
+| **ClassNotFoundException for Driver Class** | Initially, the JAR built with Maven could not locate the `DocumentSimilarityDriver`. This happened because the Java files were placed directly under `src/main/` instead of `src/main/java/`. After restructuring the project to follow the Maven convention and rebuilding, the JAR executed successfully. |
+| **JAR Missing After Docker Restart** | Each `docker compose down` removed the container, wiping the previously copied JAR. The solution was to always re-copy the built JAR into the namenode container after starting the cluster. |
+| **HDFS Output Not Accessible from Host** | Attempting to `docker cp` results directly from `/output` failed because Hadoop stores job outputs in HDFS. The fix was to first use `hdfs dfs -get` inside the namenode to copy results to the container’s local filesystem, and then use `docker cp` to bring them to the Codespace host. |
+| **Performance Measurement Across Clusters** | Needed accurate timing to compare 3-node vs 1-node runs. Used the shell’s built-in `time` command to measure job runtime for each dataset, recording map + reduce execution times. |
+| **Overwriting Inputs During Iteration** | While re-running tests with updated datasets, old HDFS inputs conflicted. Solved this by using `hdfs dfs -put -f` which overwrites existing files safely. |
